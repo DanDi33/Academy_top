@@ -6,6 +6,36 @@
 </head>
 <body>
 <h1>Hello World</h1>
+<form id="registrationForm">
+    <label for="username">Имя пользователя:</label>
+    <input type="text" id="username" name="username" required>
+     <label for="password">Пароль:</label>
+    <input type="text" id="password" name="зфыыцщкв" required>
+    <br>
+    <button type="button" onclick="registrationUser()">Зарегистрироваться</button>
+</form>
+<p id="error"></p>
+<script>
+    function registrationUser(){
+        let username = document.getElementById("username").value;
+        let password = document.getElementById("password").value;
 
+        let xhr = new XMLHttpRequest();
+        xhr.open('POST','/register',true);
+        xhr.setRequestHeader('Content-Type','application/x-www-form-urlencoded');
+        xhr.onreadystatechange = ()=>{
+            if (xhr.readyState===4){
+                if (xhr.status===200){
+                    document.getElementById('error').innerText = xhr.responseText;
+                }
+                else{
+                    document.getElementById('error').innerText = xhr.responseText;
+                }
+            }
+        }
+        let data = 'username='+encodeURIComponent(username)+"&password"+encodeURIComponent(password);
+        xhr.send()
+    }
+</script>
 </body>
 </html>

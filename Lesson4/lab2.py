@@ -57,7 +57,12 @@ def auth_user(username, password, cursor, con):
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if request.method == 'POST':
-        pass
+        username = request.form['username']
+        password = request.form['password']
+        if register_user(username, password):
+            return url_for('/login')
+        else:
+            return render_template('register.html', error="Ошибка")
     else:
         return render_template('register.html')
 
