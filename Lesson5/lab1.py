@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, flash, session, redirect, url_for
+from flask import Flask, render_template, request, flash, session, redirect, url_for,abort
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = "qwerty1234567890"
@@ -23,6 +23,9 @@ def about():
 @app.route("/profile/<path:username>")
 def profile(username):
     # print(url_for('profile', username='11'))
+    if 'userLogged' not in session or session['userLogged'] != username:
+        abort(401)
+
     return f"Пользователь -- {username}"
 
 
@@ -47,9 +50,12 @@ def login():
     if 'userLogged' in session:
         return redirect(url_for('profile', username=session["userLogged"]))
     elif request.method == "POST":
+
         if request.form['name'] == "Test" and request.form['psw'] == "123":
             session['userLogged'] = request.form['name']
             return redirect(url_for('profile', username=session["userLogged"]))
+        else:
+            flash('Ошибка авторизации')
     # print(session)
     return render_template("login.html", menu=menu, title="Авторизация")
 
