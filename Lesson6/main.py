@@ -60,7 +60,7 @@ def register():
                 flash("Ошибка при добавлении в БД", category="error")
         else:
             flash("Неверно заполнены поля", category="error")
-            return redirect(url_for('register'))
+
 
     return render_template("register.html", menu=dbase.getMenu(), title="Регистрация")
 
