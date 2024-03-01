@@ -11,3 +11,11 @@ text text not null,
 url text not null,
 time integer not null
 );
+
+create table if not exists users(
+id integer primary key autoincrement,
+name text not null,
+email text not null,
+psw text not null,
+time integer NOT NULL
+);

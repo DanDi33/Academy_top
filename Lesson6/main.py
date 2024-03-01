@@ -1,7 +1,8 @@
 import sqlite3
 import os
-from flask import Flask, render_template, request, g, flash,abort
+from flask import Flask, render_template, request, g, flash, abort, session, redirect, url_for
 from useful.FdataBase import FDataBase
+from werkzeug.security import generate_password_hash, check_password_hash
 
 # DATABASE = "/tmp/test.db"
 # DEBUG = True
@@ -12,6 +13,15 @@ from useful.FdataBase import FDataBase
 app = Flask(__name__)
 app.config.update(dict(DATABASE=os.path.join(app.root_path, 'test.db')))
 app.config["SECRET_KEY"] = "wewrtrtey1223345dfgdf"
+
+dbase = None
+
+
+@app.before_request
+def before_request():
+    global dbase
+    db = get_db()
+    dbase = FDataBase(db)
 
 
 def connect_db():
@@ -28,19 +38,42 @@ def create_db():
     db.close()
 
 
+@app.route("/login")
+def login():
+    return render_template("login.html", menu=dbase.getMenu(), title="Авторизация")
+
+
+@app.route("/register", methods=["POST", "GET"])
+def register():
+    if request.method == "POST":
+        session.pop('_flashes', None)
+        if (len(request.form['name']) > 4 and
+                len(request.form['name']) > 4 and
+                len(request.form['psw']) > 4 and
+                request.form['psw'] == request.form['psw2']):
+            hash = generate_password_hash(request.form['psw'])
+            res = dbase.addUser(request.form['name'], request.form['email'], hash)
+            if res:
+                flash("Вы успешно зарегистрированы", category="success")
+                return redirect(url_for('login'))
+            else:
+                flash("Ошибка при добавлении в БД", category="error")
+        else:
+            flash("Неверно заполнены поля", category="error")
+            return redirect(url_for('register'))
+
+    return render_template("register.html", menu=dbase.getMenu(), title="Регистрация")
+
+
 # Routes
 @app.route("/")
 def index():
-    db = get_db()
-    dbase = FDataBase(db)
     print(dbase.getMenu())
     return render_template("index.html", menu=dbase.getMenu(), posts=dbase.getPostAnonce())
 
 
 @app.route("/add_post", methods=["GET", "POST"])
 def addPost():
-    db = get_db()
-    dbase = FDataBase(db)
     if request.method == "POST":
         if len(request.form['name']) > 4 and len(request.form['post']) > 10:
             res = dbase.addPost(request.form['name'], request.form['post'], request.form['url'])
@@ -55,8 +88,6 @@ def addPost():
 
 @app.route("/post/<alias>")
 def showPost(alias):
-    db = get_db()
-    dbase = FDataBase(db)
     title, post = dbase.getPost(alias)
     if not title:
         abort(404)
@@ -72,6 +103,7 @@ def get_db():
 @app.errorhandler(404)
 def pageNotFounded(error):
     return render_template("page404.html", title="Страница не найдена")
+
 
 @app.teardown_appcontext
 def close_db(error):
