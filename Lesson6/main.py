@@ -20,6 +20,9 @@ app.config["SECRET_KEY"] = "wewrtrtey1223345dfgdf"
 dbase = None
 
 login_manager = LoginManager(app)
+login_manager.login_view = 'login'
+login_manager.login_message = 'Авторизируетесь для доступа к закрытым страницам'
+login_manager.login_message_category = 'success'
 
 
 @app.before_request
@@ -51,12 +54,14 @@ def create_db():
 
 @app.route("/login", methods=["POST", "GET"])
 def login():
+    if current_user.is_authenticated:
+        return redirect(url_for('profile'))
     if request.method == "POST":
         user = dbase.getUserByEmail(request.form['email'])
         if user and check_password_hash(user['psw'], request.form['psw']):
             userlogin = UserLogin().create(user)
             login_user(userlogin)
-            return redirect(url_for('index'))
+            return redirect(request.args.get("next") or url_for('profile'))
         flash("Неверные данные  - логин")
 
     return render_template("login.html", menu=dbase.getMenu(), title="Авторизация")
