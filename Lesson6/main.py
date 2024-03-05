@@ -2,7 +2,10 @@ import sqlite3
 import os
 from flask import Flask, render_template, request, g, flash, abort, session, redirect, url_for
 from useful.FdataBase import FDataBase
+from useful.userlogin import UserLogin
+
 from werkzeug.security import generate_password_hash, check_password_hash
+from flask_login import LoginManager, login_user, login_required, logout_user, current_user
 
 # DATABASE = "/tmp/test.db"
 # DEBUG = True
@@ -16,12 +19,20 @@ app.config["SECRET_KEY"] = "wewrtrtey1223345dfgdf"
 
 dbase = None
 
+login_manager = LoginManager(app)
+
 
 @app.before_request
 def before_request():
     global dbase
     db = get_db()
     dbase = FDataBase(db)
+
+
+@login_manager.user_loader
+def load_user(user_id):
+    print("load_user")
+    return UserLogin().fromDB(user_id, dbase)
 
 
 def connect_db():
@@ -38,8 +49,16 @@ def create_db():
     db.close()
 
 
-@app.route("/login")
+@app.route("/login", methods=["POST", "GET"])
 def login():
+    if request.method == "POST":
+        user = dbase.getUserByEmail(request.form['email'])
+        if user and check_password_hash(user['psw'], request.form['psw']):
+            userlogin = UserLogin().create(user)
+            login_user(userlogin)
+            return redirect(url_for('index'))
+        flash("Неверные данные  - логин")
+
     return render_template("login.html", menu=dbase.getMenu(), title="Авторизация")
 
 
@@ -60,7 +79,6 @@ def register():
                 flash("Ошибка при добавлении в БД", category="error")
         else:
             flash("Неверно заполнены поля", category="error")
-
 
     return render_template("register.html", menu=dbase.getMenu(), title="Регистрация")
 
@@ -87,6 +105,7 @@ def addPost():
 
 
 @app.route("/post/<alias>")
+@login_required
 def showPost(alias):
     title, post = dbase.getPost(alias)
     if not title:
@@ -99,6 +118,19 @@ def get_db():
         g.link_db = connect_db()
     return g.link_db
 
+@app.route('/profile')
+@login_required
+def profile():
+    return f"""
+            <a href="{url_for('logout')}">Выйти из профиля</a>
+            user info: {current_user.get_id()}
+            name user: {current_user.getName()}
+"""
+@app.route('/logout')
+def logout():
+    logout_user()
+    flash("Вы вышли из аккаунта", "success")
+    return redirect(url_for("login"))
 
 @app.errorhandler(404)
 def pageNotFounded(error):
