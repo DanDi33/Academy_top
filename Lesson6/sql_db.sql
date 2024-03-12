@@ -17,5 +17,6 @@ id integer primary key autoincrement,
 name text not null,
 email text not null,
 psw text not null,
+avatar BLOB default NULL,
 time integer NOT NULL
 );

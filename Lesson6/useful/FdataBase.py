@@ -22,7 +22,7 @@ class FDataBase:
             print("Error get data from DataBase")
         return []
 
-    def getUser(self,user_id):
+    def getUser(self, user_id):
         try:
             self.__cur.execute(f"SELECT * FROM users WHERE id = {user_id} LIMIT 1")
             res = self.__cur.fetchone()
@@ -56,8 +56,8 @@ class FDataBase:
             if res:
                 base = url_for('static', filename="img")
                 text = re.sub(r"(?P<tag><img\s+[^>]*src=)(?P<quote>[\"'])(?P<url>.+?)(?P=quote)>",
-        "\\g<tag>"+base+"/\\g<url>>",
-        res['text'])
+                              "\\g<tag>" + base + "/\\g<url>>",
+                              res['text'])
                 return res['title'], text
         except sqlite3.Error as e:
             print(f"Ошибка при получении поста из БД. {e}")
@@ -73,19 +73,33 @@ class FDataBase:
             print(f"Ошибка при получении постов из БД. {e}")
         return []
 
-    def addUser(self,name,email,hpsw):
+    def addUser(self, name, email, hpsw):
         try:
             self.__cur.execute(f"SELECT count() as count FROM users WHERE email LIKE '{email}'")
             res = self.__cur.fetchone()
-            if res['count']>0:
+            if res['count'] > 0:
                 print("Такой пользователь уже есть")
                 return False
-            tm=math.floor(time.time())
-            self.__cur.execute("INSERT INTO users VALUES(NULL,?,?,?,?)", (name, email, hpsw,tm))
+            tm = math.floor(time.time())
+            self.__cur.execute("INSERT INTO users VALUES(NULL,?,?,?,NULL,?)", (name, email, hpsw, tm))
             self.__db.commit()
         except sqlite3.Error as e:
-            print("Ошибка добавления в БД"+str(e))
+            print("Ошибка добавления в БД" + str(e))
 
+            return False
+        return True
+
+
+    def updateUserAvatar(self, img, user_id):
+        if not img:
+            return False
+        try:
+            binary = sqlite3.Binary(img)
+            self.__cur.execute(f"UPDATE users SET avatar = ? WHERE id = ?", (binary, user_id))
+            self.__db.commit()
+
+        except sqlite3.Error as e:
+            print(f"Ошибка обновления аватара. {e}")
             return False
         return True
 

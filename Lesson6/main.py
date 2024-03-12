@@ -1,6 +1,6 @@
 import sqlite3
 import os
-from flask import Flask, render_template, request, g, flash, abort, session, redirect, url_for
+from flask import Flask, render_template, request, g, flash, abort, session, redirect, url_for, make_response
 from useful.FdataBase import FDataBase
 from useful.userlogin import UserLogin
 
@@ -16,6 +16,7 @@ from flask_login import LoginManager, login_user, login_required, logout_user, c
 app = Flask(__name__)
 app.config.update(dict(DATABASE=os.path.join(app.root_path, 'test.db')))
 app.config["SECRET_KEY"] = "wewrtrtey1223345dfgdf"
+app.config["MAX_CONTENT_LENGTH"] = 3 * 1024 * 1024
 
 dbase = None
 
@@ -60,7 +61,8 @@ def login():
         user = dbase.getUserByEmail(request.form['email'])
         if user and check_password_hash(user['psw'], request.form['psw']):
             userlogin = UserLogin().create(user)
-            login_user(userlogin)
+            rm = True if request.form.get("remainme") else False
+            login_user(userlogin, remember=rm)
             return redirect(request.args.get("next") or url_for('profile'))
         flash("Неверные данные  - логин")
 
@@ -123,19 +125,55 @@ def get_db():
         g.link_db = connect_db()
     return g.link_db
 
+
 @app.route('/profile')
 @login_required
 def profile():
-    return f"""
-            <a href="{url_for('logout')}">Выйти из профиля</a>
-            user info: {current_user.get_id()}
-            name user: {current_user.getName()}
-"""
+    return render_template("profile.html", menu=dbase.getMenu(), title="Профиль пользователя")
+
+
+#     return f"""
+#             <a href="{url_for('logout')}">Выйти из профиля</a>
+#             user info: {current_user.get_id()}
+#             name user: {current_user.getName()}
+# """
 @app.route('/logout')
 def logout():
     logout_user()
     flash("Вы вышли из аккаунта", "success")
     return redirect(url_for("login"))
+
+
+@app.route('/userava')
+@login_required
+def userava():
+    img = current_user.getAvatar(app)
+    if not img:
+        return ""
+    answer = make_response(img)
+    answer.headers["Content-Type"] = "image/png"
+    return answer
+
+
+@app.route('/upload', methods=["POST", "GET"])
+@login_required
+def upload():
+    if request.method == "POST":
+        file = request.files['file']
+        if file:
+            try:
+                img = file.read()
+                res = dbase.updateUserAvatar(img, current_user.get_id())
+                if not res:
+                    flash("Ошибка обновления аватара", "error")
+                    return redirect(url_for("profile"))
+                flash("Аватар обновлен", "success")
+            except FileNotFoundError as e:
+                flash("Ошибка чтения файла", "error")
+        else:
+            flash("Ошибка чтения файлабновления аватара", "error")
+    return redirect(url_for("profile"))
+
 
 @app.errorhandler(404)
 def pageNotFounded(error):
