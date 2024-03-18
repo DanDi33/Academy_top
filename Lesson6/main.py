@@ -7,6 +7,7 @@ from useful.forms import LoginForm, RegisterForm
 
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import LoginManager, login_user, login_required, logout_user, current_user
+from admin.admin import admin
 
 # DATABASE = "/tmp/test.db"
 # DEBUG = True
@@ -18,6 +19,7 @@ app = Flask(__name__)
 app.config.update(dict(DATABASE=os.path.join(app.root_path, 'test.db')))
 app.config["SECRET_KEY"] = "wewrtrtey1223345dfgdf"
 app.config["MAX_CONTENT_LENGTH"] = 3 * 1024 * 1024
+app.register_blueprint(admin, url_prefix="/admin")
 
 dbase = None
 
@@ -85,7 +87,7 @@ def register():
     if form.validate_on_submit():
         hash = generate_password_hash(form.psw.data)
         res = dbase.addUser(form.name.data, form.email.data, hash)
-    # if request.method == "POST":
+        # if request.method == "POST":
         # session.pop('_flashes', None)
         # if (len(request.form['name']) > 4 and
         #         len(request.form['name']) > 4 and
