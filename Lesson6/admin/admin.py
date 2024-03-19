@@ -1,14 +1,40 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, session
+from flask import Blueprint, render_template, request, redirect, url_for, flash, session, g
+import sqlite3
 
 admin = Blueprint('admin', __name__, template_folder='templates', static_folder='static')
 menu = [{"url": ".index", "title": "Панель"}, {"url": ".logout", "title": "Выйти"}]
+
+db = None
+
+
+@admin.before_request
+def before_request():
+    # Подключение к базе
+    global db
+    db = g.get("link_db")
+
+
+@admin.teardown_request
+def teardown_request(request):
+    global db
+    db = None
+    return request
 
 
 @admin.route("/")
 def index():
     if not isLogged():
         return redirect(url_for('.login'))
-    return render_template("admin/index.html", title="Главная", menu=menu)
+    list = []
+    if db:
+        try:
+            cur = db.cursor()
+            cur.execute('SELECT title, text, url FROM posts')
+            list = cur.fetchall()
+        except sqlite3.Error as e:
+            print(f'Ошибка получения статей - admin.index. {e}')
+
+    return render_template("admin/index.html", title="Главная", menu=menu, list=list)
 
 
 @admin.route("/login", methods=["POST", "GET"])
