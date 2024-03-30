@@ -6,6 +6,7 @@ from flask_sqlalchemy import SQLAlchemy
 
 app = Flask(__name__)
 basedir = os.path.abspath(os.path.dirname(__file__))
+app.config['SECRET_KEY']="dfgdfgdfgdfg23235423453456345"
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'blog.db')
 
 db = SQLAlchemy(app)
@@ -16,6 +17,8 @@ class Users(db.Model):
     email = db.Column(db.String(50), unique=True)
     psw = db.Column(db.String(500), nullable=False)
     data = db.Column(db.DateTime, default=datetime.utcnow)
+
+    pr = db.relationship('Profiles', backref="users", uselist=False, lazy="subquery")
 
     def __repr__(self):
         return f"<users {self.id}>"
@@ -35,7 +38,12 @@ class Profiles(db.Model):
 
 @app.route("/")
 def index():
-    return render_template("index.html", title="Главная")
+    info = []
+    try:
+        info = Users.query.all()
+    except:
+        print("Ошибка чтения")
+    return render_template("index.html", title="Главная", info=info)
 
 
 @app.route("/register", methods=["POST", "GET"])
@@ -59,4 +67,7 @@ def register():
 
 
 if __name__ == "__main__":
-    app.run(port=5001, debug=True)
+    # with app.app_context():
+    #     print(Users.query.all())
+
+    app.run(debug=True)
